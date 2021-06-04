@@ -21,7 +21,8 @@
  
 
  # OUTPUT
- - batch corrected count matrix
+ - batch corrected counts matrix
+ - DESeq2 normalized counts matrix
  - DESeq2 results (GeneID, ensID, Log2Foldchange,padj)
  - distance plot
  - PCA plot
