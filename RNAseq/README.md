@@ -4,7 +4,7 @@
 - counts matrix
 - condition file 
 
-<em>1. optional(if batch correction necessary) :
+<em>2. optional(if batch correction necessary) :
 - batch information must be in condition file
 
 
