@@ -20,6 +20,23 @@
 - batch information must be in condition file
  
 
+ # OUTPUT
+ - batch corrected count matrix
+ - DESeq2 results (GeneID, ensID, Log2Foldchange,padj)
+ - distance plot
+ - PCA plot
+ - Volcanoplot
+ - Top10 Foldchange plot
+ - enriched KEGG pathway
+ - enriched GO
+ - enriched cell marker
+ - enriched KEGG, GO, cellmarker (FC > 1)
+ - enriched KEGG, GO, cellmarker (FC > -1)
+ 
+ 
+ 
+ 
+ 
 # MUST SET OWN DIRECTORY PATH! 
 
 ![image](https://user-images.githubusercontent.com/63722122/120759375-ec260380-c54d-11eb-8543-6d58f1c5beb7.png)
