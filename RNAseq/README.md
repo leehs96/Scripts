@@ -3,6 +3,8 @@
 <em>1. requirements :
 - counts matrix
 - condition file 
+ ![image](https://user-images.githubusercontent.com/63722122/120759790-576fd580-c54e-11eb-8a67-f9736797cd54.png)
+
 
 <em>2. optional(if batch correction necessary) :
 - batch information must be in condition file
@@ -17,5 +19,10 @@
 
 
 
-
+[DESeq2 Document] (http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html)
+[ComBat-seq github] (https://github.com/zhangyuqing/ComBat-seq)
+[EnhancedVolcano document] (https://bioconductor.org/packages/release/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html)
+[pheatmap] (https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/)
+[ggplot2] (https://statkclee.github.io/R-ecology-lesson/kr/05-visualization-ggplot2.html)
+ 
 
