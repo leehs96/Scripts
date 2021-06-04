@@ -26,7 +26,7 @@
  - DESeq2 results (GeneID, ensID, Log2Foldchange,padj)
  - distance plot
  - PCA plot
- - Volcanoplot
+ - Volcano plot
  - Top10 Foldchange plot
  - enriched KEGG pathway
  - enriched GO
