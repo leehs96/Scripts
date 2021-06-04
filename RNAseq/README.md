@@ -1,9 +1,9 @@
-#DESeq2
+# DESeq2
 
-<strong>1. requirements :</strong> 
+<em>1. requirements :
 	- counts matrix
 	- condition file 
-<strong>1. optional(if batch correction necessary) :</strong> 
+<em>1. optional(if batch correction necessary) :
 	- batch information must be in condition file
 
 
