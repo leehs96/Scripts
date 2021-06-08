@@ -11,7 +11,7 @@ library(reshape)
 library(sva)
 library(umapr)
 
-setwd('/users/hslee/HCC/HCC')
+#setwd('/users/hslee/HCC/HCC')
 
 ###################################################################################################
 
@@ -67,6 +67,15 @@ data <- read.csv('merged_batch_corrected_HCC_data.csv', header = T, row.names = 
 GENE <- read.csv('ensGene_GeneID.csv', header = T, row.names = 1)
 dev.off()
 
+###################################################################################################
+###########.............................!!!!IMPORTANT!!!!............................##############
+#                                                                                                 #
+## assign condition                                                                               #
+Condition <- 'miHCC_vs_wiHCC'          
+#                    ###### this variable is used as plot file_name & DESeq2 parameter            #
+#                    ###### Condition must be 'control_vs_case' form  ex: FA_vs_HA                #
+###################################################################################################
+
 #sample data wrangling 
 adjusted <- data
 sample <- read.csv('HCC_condition.csv',header = T, row.names = 1)
@@ -74,14 +83,6 @@ sample <- read.csv('HCC_condition.csv',header = T, row.names = 1)
 sample$condition <- factor(sample$condition) # condition
 
 
-###################################################################################################
-###########.............................!!!!IMPORTANT!!!!............................##############
-#                                                                                                 #
-## assign condition                                                                               #
-Condition <- 'FA_vs_HA'          
-#                    ###### this variable is used as plot file_name & DESeq2 parameter            #
-#                    ###### Condition must be 'control_vs_case' form  ex: FA_vs_HA                #
-###################################################################################################
 sample <- sample[sample$condition %in% c(gsub('.*vs_','',Condition),gsub('_vs_.*','',Condition)),]
 
 
@@ -364,8 +365,7 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
     p <- p + ggplot2::ggtitle("Term-Gene Graph")
   }
   else {
-    p <- p + ggplot2::ggtitle("Term-Gene Graph", subtitle = paste(c("Top", 
-                                                                    num_terms, "terms"), collapse = " "))
+    p <- p + ggplot2::ggtitle("Term-Gene Graph", subtitle = paste0(gsub('_',' ',Condition))
   }
   p <- p + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5), 
                           plot.subtitle = ggplot2::element_text(hjust = 0.5))
@@ -484,8 +484,8 @@ dev.off()
 
 dev.off()
 
-input2 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T, row.names = 1) %>% 
-  mutate(Gene.symbol = GENEid) %>% 
+input2 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T) %>% 
+  mutate(Gene.symbol = ifelse(is.na(GENEid),ensGene,GENEid)) %>% 
   dplyr::select(Gene.symbol,log2FoldChange, padj) %>% 
   dplyr::filter(padj <= 0.05 & log2FoldChange > 1)
 
@@ -545,7 +545,7 @@ tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_GO_MF_Top10_pathway.tif
 pathfindR_MF_df_FC1 <- run_pathfindR(
   gene_sets = 'GO-MF',
   input2,
-  output_dir = paste0('./MF_FC1/',Condition),
+  output_dir = paste0('./GO/MF_FC1/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.05)
 dev.off()
@@ -627,8 +627,6 @@ dev.off()
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_term_gene_graph.tiff"),width=15, height=15, units = 'in', res = 150)
 term_gene_graph_manual(result_df = pathfindR_pathway_df_FC1[with(pathfindR_pathway_df_FC1, order(lowest_p,-Fold_Enrichment)),][][1:10,], use_description = TRUE , node_size = 'p_val')
 dev.off()
-
-dd[with(dd, order(-z, b)), ]
 
 
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_term_UpSet_plot.tiff"),width=20, height=20, units = 'in', res = 150)
