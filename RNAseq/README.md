@@ -26,7 +26,7 @@
  - DESeq2 results (GeneID, ensID, Log2Foldchange,padj)
  - distance plot
  - PCA plot
- - Volcanoplot
+ - Volcano plot
  - Top10 Foldchange plot
  - enriched KEGG pathway
  - enriched GO
@@ -57,5 +57,7 @@
  
 [ggplot2] (https://statkclee.github.io/R-ecology-lesson/kr/05-visualization-ggplot2.html)
  
+[pathfindR] (https://github.com/egeulgen/pathfindR)
  
+[DAVID] (https://david.ncifcrf.gov/list.jsp)
 
