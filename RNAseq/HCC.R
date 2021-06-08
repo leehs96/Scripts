@@ -71,7 +71,7 @@ dev.off()
 ###########.............................!!!!IMPORTANT!!!!............................##############
 #                                                                                                 #
 ## assign condition                                                                               #
-Condition <- 'miHCC_vs_wiHCC'          
+Condition <- 'miFTC_vs_miHCC'          
 #                    ###### this variable is used as plot file_name & DESeq2 parameter            #
 #                    ###### Condition must be 'control_vs_case' form  ex: FA_vs_HA                #
 ###################################################################################################
@@ -124,7 +124,7 @@ res <- results(ddsDE, contrast = c("condition",gsub('.*vs_','',Condition), gsub(
 
 #order by p-adj
 resOrdered <- as.data.frame(res[order(res$padj),])
-write.csv(merge(resOrdered %>% dplyr::filter(padj <= 0.05),GENE,by = 0, all.x=T) %>% relocate(GENEid) %>% dplyr::rename(ensGene = Row.names) ,paste0('./DEG/',Condition,".csv"), row.names = F)
+write.csv(merge(resOrdered %>% dplyr::filter(padj <= 0.05),GENE,by = 0, all.x=T) %>% relocate(GENEid) %>% dplyr::rename(ensGene = Row.names) %>% arrange(padj) ,paste0('./DEG/',Condition,".csv")  , row.names = F)
 
 #PCA
 vsd <- vst(dds, blind = F)
@@ -279,7 +279,6 @@ dev.off()
 
 ###################################################################################################
 
-#plot function
 term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress", use_description = FALSE, node_size = "num_genes") {
   if (!is.numeric(num_terms) & !is.null(num_terms)) {
     stop("`num_terms` must either be numeric or NULL!")
@@ -287,19 +286,19 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
   if (!is.logical(use_description)) {
     stop("`use_description` must either be TRUE or FALSE!")
   }
-  ID_column <- ifelse(use_description, "Term_Description", 
+  ID_column <- ifelse(use_description, "Term_Description",
                       "ID")
   val_node_size <- c("num_genes", "p_val")
   if (!node_size %in% val_node_size) {
-    stop("`node_size` should be one of ", paste(dQuote(val_node_size), 
+    stop("`node_size` should be one of ", paste(dQuote(val_node_size),
                                                 collapse = ", "))
   }
-  if (!is.data.frame(result_df)) 
+  if (!is.data.frame(result_df))
     stop("`result_df` should be a data frame")
-  necessary_cols <- c(ID_column, "lowest_p", "Up_regulated", 
+  necessary_cols <- c(ID_column, "lowest_p", "Up_regulated",
                       "Down_regulated")
   if (!all(necessary_cols %in% colnames(result_df))) {
-    stop(paste(c("All of", paste(necessary_cols, collapse = ", "), 
+    stop(paste(c("All of", paste(necessary_cols, collapse = ", "),
                  "must be present in `results_df`!"), collapse = " "))
   }
   if (!is.null(num_terms)) {
@@ -307,30 +306,30 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
       num_terms <- NULL
     }
   }
-  result_df <- result_df[order(result_df$lowest_p, decreasing = FALSE), 
+  result_df <- result_df[order(result_df$lowest_p, decreasing = FALSE),
   ]
   if (!is.null(num_terms)) {
     result_df <- result_df[1:num_terms, ]
   }
   graph_df <- data.frame()
   for (i in base::seq_len(nrow(result_df))) {
-    up_genes <- unlist(strsplit(result_df$Up_regulated[i], 
+    up_genes <- unlist(strsplit(result_df$Up_regulated[i],
                                 ", "))
-    down_genes <- unlist(strsplit(result_df$Down_regulated[i], 
+    down_genes <- unlist(strsplit(result_df$Down_regulated[i],
                                   ", "))
     genes <- c(up_genes, down_genes)
     for (gene in genes) {
-      graph_df <- rbind(graph_df, data.frame(Term = result_df[i, 
+      graph_df <- rbind(graph_df, data.frame(Term = result_df[i,
                                                               ID_column], Gene = gene))
     }
   }
-  up_genes <- lapply(result_df$Up_regulated, function(x) unlist(strsplit(x, 
+  up_genes <- lapply(result_df$Up_regulated, function(x) unlist(strsplit(x,
                                                                          ", ")))
   up_genes <- unlist(up_genes)
   g <- igraph::graph_from_data_frame(graph_df, directed = FALSE)
   cond_term <- names(igraph::V(g)) %in% result_df[, ID_column]
   cond_up_gene <- names(igraph::V(g)) %in% up_genes
-  igraph::V(g)$type <- ifelse(cond_term, "term", ifelse(cond_up_gene, 
+  igraph::V(g)$type <- ifelse(cond_term, "term", ifelse(cond_up_gene,
                                                         "up", "down"))
   if (node_size == "num_genes") {
     sizes <- igraph::degree(g)
@@ -346,20 +345,20 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
   igraph::V(g)$size <- sizes
   igraph::V(g)$label.cex <- 0.15
   igraph::V(g)$frame.color <- "gray"
-  igraph::V(g)$color <- ifelse(igraph::V(g)$type == "term", 
-                               "#E5D7BF", ifelse(igraph::V(g)$type == "up", "red", 
+  igraph::V(g)$color <- ifelse(igraph::V(g)$type == "term",
+                               "#E5D7BF", ifelse(igraph::V(g)$type == "up", "red",
                                                  "green"))
   p <- ggraph::ggraph(g, layout = layout)
   p <- p + ggraph::geom_edge_link(alpha = 0.8, colour = "darkgrey")
-  p <- p + ggraph::geom_node_point(ggplot2::aes_(color = ~I(color), 
+  p <- p + ggraph::geom_node_point(ggplot2::aes_(color = ~I(color),
                                                  size = ~size))
-  p <- p + ggplot2::scale_size(range = c(5, 10), breaks = round(seq(round(min(igraph::V(g)$size)), 
+  p <- p + ggplot2::scale_size(range = c(5, 10), breaks = round(seq(round(min(igraph::V(g)$size)),
                                                                     round(max(igraph::V(g)$size)), length.out = 4)), name = size_label)
   p <- p + ggplot2::theme_void()
-  p <- p + ggraph::geom_node_text(ggplot2::aes_(label = ~name), 
+  p <- p + ggraph::geom_node_text(ggplot2::aes_(label = ~name),
                                   nudge_y = 0.2)
-  p <- p + ggplot2::scale_colour_manual(values = unique(igraph::V(g)$color), 
-                                        name = NULL, labels = c("enriched term", "up-regulated gene", 
+  p <- p + ggplot2::scale_colour_manual(values = unique(igraph::V(g)$color),
+                                        name = NULL, labels = c("enriched term", "up-regulated gene",
                                                                 "down-regulated gene"))
   if (is.null(num_terms)) {
     p <- p + ggplot2::ggtitle("Term-Gene Graph")
@@ -367,15 +366,15 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
   else {
     p <- p + ggplot2::ggtitle("Term-Gene Graph", subtitle = paste0(gsub('_',' ',Condition))
   }
-  p <- p + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5), 
+  p <- p + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
                           plot.subtitle = ggplot2::element_text(hjust = 0.5))
   return(p)
 }
 
-# assign input data 
-input <- resOrdered_GENEid %>% 
-  mutate(Gene.symbol = GENEid) %>% 
-  dplyr::select(Gene.symbol,log2FoldChange, padj) %>% 
+# assign input data
+input <- resOrdered_GENEid %>%
+  mutate(Gene.symbol = GENEid) %>%
+  dplyr::select(Gene.symbol,log2FoldChange, padj) %>%
   dplyr::filter(padj <= 0.05)
 
 kable(head(input))
@@ -484,9 +483,9 @@ dev.off()
 
 dev.off()
 
-input2 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T) %>% 
-  mutate(Gene.symbol = ifelse(is.na(GENEid),ensGene,GENEid)) %>% 
-  dplyr::select(Gene.symbol,log2FoldChange, padj) %>% 
+input2 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T) %>%
+  mutate(Gene.symbol = ifelse(is.na(GENEid),ensGene,GENEid)) %>%
+  dplyr::select(Gene.symbol,log2FoldChange, padj) %>%
   dplyr::filter(padj <= 0.05 & log2FoldChange > 1)
 
 
@@ -586,16 +585,15 @@ enrichment_chart(clustered_CM_top5_FC1, plot_by_cluster = TRUE)
 dev.off()
 
 dev.off()
-
 ########################################################################################################################################
 # using Up regulated DEG (FDR < 0.05, Log2FC < -1)
 
 
 dev.off()
 
-input2 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T, row.names = 1) %>% 
-  mutate(Gene.symbol = GENEid) %>% 
-  dplyr::select(Gene.symbol,log2FoldChange, padj) %>% 
+input3 <- read.csv(paste0('DEG/',Condition,'.csv'), header = T) %>%
+  mutate(Gene.symbol = ifelse(is.na(GENEid),ensGene,GENEid)) %>%
+  dplyr::select(Gene.symbol,log2FoldChange, padj) %>%
   dplyr::filter(padj <= 0.05 & log2FoldChange < -1)
 
 
@@ -604,7 +602,7 @@ kable(head(input2))
 
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_KEGG_Top10_pathway.tiff"),width=10, height=15, units = 'in', res = 150)
 pathfindR_pathway_df_FC1 <- run_pathfindR(
-  input2,
+  input3,
   output_dir = paste0('./pathway_FC1_DOWN/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.01)
@@ -636,7 +634,7 @@ dev.off()
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_GO_BP_Top10_pathway.tiff"),width=15, height=7, units = 'in', res = 150)
 pathfindR_BP_df_FC1 <- run_pathfindR(
   gene_sets = 'GO-BP',
-  input2,
+  input3,
   output_dir = paste0('./GO/BP_FC1_DOWN/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.05)
@@ -645,7 +643,7 @@ dev.off()
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_GO_CC_Top10_pathway.tiff"),width=15, height=7, units = 'in', res = 150)
 pathfindR_CC_df_FC1 <- run_pathfindR(
   gene_sets = 'GO-CC',
-  input2,
+  input3,
   output_dir = paste0('./GO/CC_FC1_DOWN/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.05)
@@ -654,7 +652,7 @@ dev.off()
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_GO_MF_Top10_pathway.tiff"),width=15, height=7, units = 'in', res = 150)
 pathfindR_MF_df_FC1 <- run_pathfindR(
   gene_sets = 'GO-MF',
-  input2,
+  input3,
   output_dir = paste0('./GO/MF_FC1_DOWN/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.05)
@@ -663,7 +661,7 @@ dev.off()
 tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_CM_Top10_pathway.tiff"),width=15, height=7, units = 'in', res = 150)
 pathfindR_CM_df_FC1 <- run_pathfindR(
   gene_sets = 'cell_markers',
-  input2,
+  input3,
   output_dir = paste0('./cell_markers_FC1_DOWN/',Condition),
   adj_method = 'fdr',
   enrichment_threshold = 0.05)
