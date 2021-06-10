@@ -45,11 +45,11 @@ before_batch <- rm_low_EXP_gene_Data[,rownames(condition)]
 
 batch <- condition$batch
 group <- condition$type
-cov_mat <- as.matrix(condition %>% dplyr::select(type, type3))
+#cov_mat <- as.matrix(condition %>% dplyr::select(type, type3))
 
 ###d. batch correction using ComBat_seq
 
-after_batch <- ComBat_seq(as.matrix(before_batch), batch=batch, covar_mod = cov_mat)
+after_batch <- ComBat_seq(as.matrix(before_batch), batch=batch)
 write.csv(after_batch,'merged_batch_corrected_HCC_data.csv')
 
 
@@ -71,7 +71,7 @@ dev.off()
 ###########.............................!!!!IMPORTANT!!!!............................##############
 #                                                                                                 #
 ## assign condition                                                                               #
-Condition <- 'miFTC_vs_miHCC'          
+Condition <- 'FA_miFTC_vs_HA_miHCC'          
 #                    ###### this variable is used as plot file_name & DESeq2 parameter            #
 #                    ###### Condition must be 'control_vs_case' form  ex: FA_vs_HA                #
 ###################################################################################################
@@ -79,6 +79,8 @@ Condition <- 'miFTC_vs_miHCC'
 #sample data wrangling 
 adjusted <- data
 sample <- read.csv('HCC_condition.csv',header = T, row.names = 1)
+sample <- sample[sample$condition %in% c('FA','miFTC','HA','miHCC'),]
+sample$condition <- ifelse(grepl('F',sample$condition),'FA_miFTC','HA_miHCC')
 
 sample$condition <- factor(sample$condition) # condition
 
@@ -99,32 +101,14 @@ dds <- DESeqDataSetFromMatrix(countData = adjusted,
                               design = ~ condition)
 
 
+#create sub-directory of each condition if not available
 #remove lowly exp ( >=10 ). gene
 keep <- rowSums(counts(dds)) >= 10
 
 dds <- dds[keep,]
 
-#create sub-directory of each condition if not available
+
 dir.create(paste0('./plot/',Condition))
-
-
-#export normalized exp values
-ddsN <- estimateSizeFactors(dds)
-ddsN <- estimateDispersions(ddsN)
-
-Ndds <- counts(ddsN, normalized = T)
-#write.csv(Ndds,paste0('./Norm/',Condition,".csv"))
-
-#DEG
-ddsDE <- DESeq(dds)
-
-#results change p-adj sig value 0.05
-res <- results(ddsDE, contrast = c("condition",gsub('.*vs_','',Condition), gsub('_vs_.*','',Condition)) , alpha = 0.05)
-
-
-#order by p-adj
-resOrdered <- as.data.frame(res[order(res$padj),])
-write.csv(merge(resOrdered %>% dplyr::filter(padj <= 0.05),GENE,by = 0, all.x=T) %>% relocate(GENEid) %>% dplyr::rename(ensGene = Row.names) %>% arrange(padj) ,paste0('./DEG/',Condition,".csv")  , row.names = F)
 
 #PCA
 vsd <- vst(dds, blind = F)
@@ -141,10 +125,29 @@ ggplot(pcaData, aes(PC1, PC2, color=condition)) +
   geom_text(aes(label=rownames(pcaData)),hjust=.5, vjust=-1.5, size=2, color='black', fontface = 'bold')
 dev.off()
 
+#export normalized exp values
+ddsN <- estimateSizeFactors(dds)
+ddsN <- estimateDispersions(ddsN)
+
+Ndds <- counts(ddsN, normalized = T)
+write.csv(Ndds,paste0('./Norm/',Condition,".csv"))
+
+#DEG
+ddsDE <- DESeq(dds)
+
+#results change p-adj sig value 0.05
+res <- results(ddsDE, contrast = c("condition",gsub('.*vs_','',Condition), gsub('_vs_.*','',Condition)) , alpha = 0.05)
+
+
+#order by p-adj
+resOrdered <- as.data.frame(res[order(res$padj),])
+write.csv(merge(resOrdered %>% dplyr::filter(padj <= 0.05),GENE,by = 0, all.x=T) %>% relocate(GENEid) %>% dplyr::rename(ensGene = Row.names) %>% arrange(padj) ,paste0('./DEG/',Condition,".csv")  , row.names = F)
+
+
 #UMAP
 
-# UMAP_DF <- as.matrix(t(before_batch))
-# UMAP <- umap(log10(UMAP_DF+1), metric = 'manhattan')
+# UMAP_DF <- as.matrix(t(Ndds))
+# UMAP <- umap(log2(UMAP_DF+1), metric = 'manhattan')
 # 
 # UMAP <- cbind(UMAP,sample %>% dplyr::select(condition))
 # 
@@ -156,7 +159,7 @@ dev.off()
 #   geom_text_repel(label=rownames(UMAP_DF),hjust=.5, size=2.5, color='black', fontface = 'bold') +
 #   ggtitle('UMAP : before batch correction ') +
 #   theme(plot.title = element_text(color="black", size=17, face="bold"))# + facet_wrap(~ Distance, scales = 'free')
-# 
+
 
 
 
@@ -273,6 +276,36 @@ TOP10_fold %>%
   theme(axis.text=element_text(size=10.5),axis.title=element_text(size=16,face="bold"),text = element_text(size = 16, face = "bold"), legend.position = 'none')
 dev.off()
 
+
+anno <- read.csv('FAvsHA_anno.csv', row.names = 1)
+
+ann_colors = list(
+  condition = c(FA = 'cyan4', HA = 'red3')
+)
+
+#TOP20 sig. gene heatmap
+
+p <- pheatmap(
+  log2(Ndds[rownames(Ndds) %in% resOrdered_GENEid$Row.names[1:20],]+1),
+  annotation_col = anno,
+  annotation_colors = ann_colors,
+  color = greenred(99),
+  #breaks = c(-1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1),
+  clustering_method = "ward.D2",
+  border_color = NA,
+  clustering_distance_rows = "correlation",
+  fontsize_row = 10,
+  cluster_rows = T,
+  cluster_cols = T,
+  scale = "row",
+  show_colnames = T,
+  show_rownames = T,
+  legend = T,
+  cutree_cols = 2,
+  cutree_rows = 2
+)
+p
+
 ###################################################################################################
 
 #.................................pathway analysis using PathfindR................................#
@@ -364,7 +397,7 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
     p <- p + ggplot2::ggtitle("Term-Gene Graph")
   }
   else {
-    p <- p + ggplot2::ggtitle("Term-Gene Graph", subtitle = paste0(gsub('_',' ',Condition))
+    p <- p + ggplot2::ggtitle("Term-Gene Graph", subtitle = paste0(gsub('_',' ',Condition)))
   }
   p <- p + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
                           plot.subtitle = ggplot2::element_text(hjust = 0.5))
@@ -372,10 +405,10 @@ term_gene_graph_manual <- function (result_df, num_terms = 11, layout = "stress"
 }
 
 # assign input data
-input <- resOrdered_GENEid %>%
-  mutate(Gene.symbol = GENEid) %>%
+input <- read.csv(paste0('DEG/',Condition,'.csv'), header = T) %>%
+  mutate(Gene.symbol = ifelse(is.na(GENEid),ensGene,GENEid)) %>%
   dplyr::select(Gene.symbol,log2FoldChange, padj) %>%
-  dplyr::filter(padj <= 0.05)
+  dplyr::filter(padj <= 0.05 )
 
 kable(head(input))
 
@@ -451,29 +484,29 @@ dev.off()
 
 dev.off()
 
-clustered_BP <- cluster_enriched_terms(pathfindR_BP_df, plot_clusters_graph = F, plot_dend = F)
-clustered_BP_top5 <- subset(clustered_BP, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_BP_top5, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_CC <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
-clustered_CC_top5 <- subset(clustered_CC, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CC_top5, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_MF <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
-clustered_MF_top5 <- subset(clustered_MF, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_MF_top5, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_CM <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
-clustered_CM_top5 <- subset(clustered_CM, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CM_top5, plot_by_cluster = TRUE)
-dev.off()
+# clustered_BP <- cluster_enriched_terms(pathfindR_BP_df, plot_clusters_graph = F, plot_dend = F)
+# clustered_BP_top5 <- subset(clustered_BP, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_BP_top5, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CC <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
+# clustered_CC_top5 <- subset(clustered_CC, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CC_top5, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_MF <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
+# clustered_MF_top5 <- subset(clustered_MF, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_MF_top5, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CM <- cluster_enriched_terms(pathfindR_CC_df, plot_clusters_graph = F, plot_dend = F)
+# clustered_CM_top5 <- subset(clustered_CM, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CM_top5, plot_by_cluster = TRUE)
+# dev.off()
 
 dev.off()
 
@@ -560,31 +593,32 @@ dev.off()
 
 dev.off()
 
-clustered_BP_FC1 <- cluster_enriched_terms(pathfindR_BP_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_BP_top5_FC1 <- subset(clustered_BP_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_BP_top5_FC1, plot_by_cluster = TRUE)
+# clustered_BP_FC1 <- cluster_enriched_terms(pathfindR_BP_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_BP_top5_FC1 <- subset(clustered_BP_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_BP_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CC_FC1 <- cluster_enriched_terms(pathfindR_CC_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_CC_top5_FC1 <- subset(clustered_CC_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CC_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_MF_FC1 <- cluster_enriched_terms(pathfindR_MF_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_MF_top5_FC1 <- subset(clustered_MF_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_MF_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CM_FC1 <- cluster_enriched_terms(pathfindR_CM_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_CM_top5_FC1 <- subset(clustered_CM_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CM_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+
 dev.off()
 
-clustered_CC_FC1 <- cluster_enriched_terms(pathfindR_CC_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_CC_top5_FC1 <- subset(clustered_CC_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CC_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_MF_FC1 <- cluster_enriched_terms(pathfindR_MF_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_MF_top5_FC1 <- subset(clustered_MF_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_MF_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_CM_FC1 <- cluster_enriched_terms(pathfindR_CM_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_CM_top5_FC1 <- subset(clustered_CM_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CM_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-dev.off()
 ########################################################################################################################################
 # using Up regulated DEG (FDR < 0.05, Log2FC < -1)
 
@@ -669,28 +703,28 @@ dev.off()
 
 dev.off()
 
-clustered_BP_FC1 <- cluster_enriched_terms(pathfindR_BP_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_BP_top5_FC1 <- subset(clustered_BP_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_BP_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_CC_FC1 <- cluster_enriched_terms(pathfindR_CC_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_CC_top5_FC1 <- subset(clustered_CC_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CC_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_MF_FC1 <- cluster_enriched_terms(pathfindR_MF_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_MF_top5_FC1 <- subset(clustered_MF_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_MF_top5_FC1, plot_by_cluster = TRUE)
-dev.off()
-
-clustered_CM_FC1 <- cluster_enriched_terms(pathfindR_CM_df_FC1, plot_clusters_graph = F, plot_dend = F)
-clustered_CM_top5_FC1 <- subset(clustered_CM_FC1, Cluster %in% 1:5)
-tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
-enrichment_chart(clustered_CM_top5_FC1, plot_by_cluster = TRUE)
+# clustered_BP_FC1 <- cluster_enriched_terms(pathfindR_BP_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_BP_top5_FC1 <- subset(clustered_BP_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_BP.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_BP_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CC_FC1 <- cluster_enriched_terms(pathfindR_CC_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_CC_top5_FC1 <- subset(clustered_CC_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_CC.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CC_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_MF_FC1 <- cluster_enriched_terms(pathfindR_MF_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_MF_top5_FC1 <- subset(clustered_MF_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_MF.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_MF_top5_FC1, plot_by_cluster = TRUE)
+# dev.off()
+# 
+# clustered_CM_FC1 <- cluster_enriched_terms(pathfindR_CM_df_FC1, plot_clusters_graph = F, plot_dend = F)
+# clustered_CM_top5_FC1 <- subset(clustered_CM_FC1, Cluster %in% 1:5)
+# tiff(file=paste0('./plot/',Condition,'/',Condition,"_FC1_DOWN_Top5_cluster_CM.tiff"),width=15, height=7, units = 'in', res = 150)
+# enrichment_chart(clustered_CM_top5_FC1, plot_by_cluster = TRUE)
 dev.off()
 
 dev.off()
