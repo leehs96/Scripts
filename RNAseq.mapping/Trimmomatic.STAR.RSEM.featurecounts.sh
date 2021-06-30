@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# STAR \
+#     --runThreadN 5 \
+#     --runMode genomeGenerate \
+#     --genomeDir /users/data/reference/ens \
+#     --sjdbGTFfile /users/data/reference/ens/Homo_sapiens.GRCh38.102.chr.gtf \
+#     --genomeFastaFiles users/data/reference/ens/Homo_sapiens.GRCh38.dna.primary_assembly.fa \
+#     --sjdbOverhang 100
+
 #rsem-prepare-reference --gtf /users/data/reference/ens/Homo_sapiens.GRCh38.102.chr.gtf \
 #                        --star \
 #                        --star-path ~/anaconda3/pkgs/star-2.7.6a-0/bin \
@@ -122,11 +130,13 @@ rsem-calculate-expression \
     --bam --no-bam-output \
     ${OutputPath}/bam/${Sample}.STAR.Aligned.toTranscriptome.out.bam \
     /users/data/reference/ens/Homo_sapiens.GRCh38.dna.primary_assembly \
-    ${OutputPath}/RSEM/${Sample}
+    ${OutputPath}/RSEM/${Sample} 
 
+wait
 
 rm ${OutputPath}/bam/${Sample}.STAR.Aligned.toTranscriptome.out.bam
-
+rm  ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz
+rm  ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz 
 
 done < ${coldata}
 
