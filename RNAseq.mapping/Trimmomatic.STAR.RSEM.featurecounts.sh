@@ -4,6 +4,8 @@
 #                                                                 #
 #  STAR version : 2.7.4a                                          #
 #                                                                 #
+#  RSEM version : 1.3.1                                           #
+#                                                                 #
 #  reference fasta : Homo_sapiens.GRCh38.dna.primary_assembly.fa  #
 #                                                                 #
 #  reference GTF : Homo_sapiens.GRCh38.104.gtf                    #
