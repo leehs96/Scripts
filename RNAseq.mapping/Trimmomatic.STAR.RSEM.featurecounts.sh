@@ -12,6 +12,7 @@
 #                                                                 #    
 ###################################################################
 
+# in case of reference file malfunction
 
 #STAR \
 #     --runThreadN 5 \
@@ -29,6 +30,7 @@
 #                        /users/data/reference/hg38/Homo_sapiens.GRCh38.dna.primary_assembly
 
 coldata=$1
+do.featurecount=$2  #1 = do featurecounts, 0 = don't
 
 while IFS= read -r line || [ -n "$line" ] 
 do
@@ -39,17 +41,21 @@ FastqPath=`echo ${Line} | awk '{print $2}'`
 Sample=`echo ${Line} | awk '{print $3}'`
 OutputPath=`echo ${Line} | awk '{print $4}'`
  
+
+dir=("","trim","bam","RSEM")
+
+for dir.name in ${dir[@]}
+do
 if [ ! -d ${OutputPath} ]; then
-  mkdir ${OutputPath}
+  mkdir ${OutputPath}/${dir.name}
 fi
 
-mkdir ${OutputPath}/trim
-mkdir ${OutputPath}/bam
-mkdir ${OutputPath}/RSEM
-mkdir ${OutputPath}/featureCounts
+rm /users/data/log/${Sample}.log
 
+date +"%d-%m-%Y %T: ${Sample} RNA processing START" |tee -a /users/data/log/${Sample}.log
 
-echo ${Line}
+echo "${Sample} : Outputpath = ${OutputPath}  " |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : trimommatic  " |tee -a /users/data/log/${Sample}.log
 
 trimmomatic PE \
     -threads 5 \
@@ -68,11 +74,15 @@ trimmomatic PE \
 rm  ${OutputPath}/trim/${Sample}_RNA_U_1.fastq.gz 
 rm  ${OutputPath}/trim/${Sample}_RNA_U_2.fastq.gz 
 
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : trimommatic Done " |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : trimommatic Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 wait
-
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : STAR \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 STAR \
    --genomeDir \
    /users/data/reference/hg38/ \
@@ -90,9 +100,10 @@ STAR \
 
 wait 
 
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : STAR Done " |tee -a /users/data/log/${Sample}.log
-
+echo "${Sample} : STAR Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 samtools index ${OutputPath}/bam/${Sample}.STAR.Aligned.sortedByCoord.out.bam &&
 
 UnS=`grep 'ENSG00000111640' ${OutputPath}/bam/${Sample}.STAR.ReadsPerGene.out.tab | awk '{print $2}'`
@@ -122,10 +133,15 @@ fi
 
 
 
-
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
 echo "${Sample} : ${dicision}" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
+
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : RSEM \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 if [ ${dicision} = "UnStranded" ]
 then
@@ -172,58 +188,84 @@ else
     exit 1
 fi &&
 
-echo "${Sample} : RSEM Done " |tee -a /users/data/log/${Sample}.log
+rm ${OutputPath}/bam/${Sample}.STAR.Aligned.toTranscriptome.out.bam
+rm ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz
+rm ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz 
+
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : RSEM Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 wait
 
-# rm ${OutputPath}/bam/${Sample}.STAR.Aligned.toTranscriptome.out.bam
-# rm  ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz
-# rm  ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz 
 
 done < ${coldata}
 
 
 wait
-
-if [ ${dicision} = "UnStranded" ]
+if [ ${do.featurecount} -eq 1 ]
 then
 
-    featureCounts -T 10 -s 0 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-    -o ${OutputPath}/featureCounts/featurecounts.results.txt \
-    ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+
+
+    if [ ${dicision} = "UnStranded" ]
+    then
+
+        featureCounts -T 10 -s 0 -p \
+        -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
+        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
 
 
-elif [ ${dicision} = "Stranded" ]
+    elif [ ${dicision} = "Stranded" ]
+    then
+
+        featureCounts -T 10 -s 1 -p \
+        -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
+        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
+
+
+    elif [ ${dicision} = "ReverselyStranded" ]
+    then
+
+        featureCounts -T 10 -s 2 -p \
+        -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
+        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
+
+
+    else
+        echo "ERROR undefined RSEM strandedness"
+        exit 1
+    fi &&
+
+    sed -i "s:${OutputPath}/bam/::" ${OutputPath}/featureCounts/featurecounts.results.txt
+    sed -i "s:.STAR.Aligned.sortedByCoord.out.bam::" ${OutputPath}/featureCounts/featurecounts.results.txt
+    cut -f1,7- ${OutputPath}/featureCounts/featurecounts.results.txt > ${OutputPath}/featureCounts/featurecounts.results.final.txt
+elif [ ! ${do.featurecount} -eq 0 ]
 then
-
-    featureCounts -T 10 -s 1 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-    -o ${OutputPath}/featureCounts/featurecounts.results.txt \
-    ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
-
-
-elif [ ${dicision} = "ReverselyStranded" ]
-then
-
-    featureCounts -T 10 -s 2 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-    -o ${OutputPath}/featureCounts/featurecounts.results.txt \
-    ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
-
-
+    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
+    echo "${Sample} : All Done w/o FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 else
-    echo "ERROR undefined RSEM strandedness"
-    exit 1
+    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
+    echo "${Sample} : 1 = do featurecounts, 0 = don't \n\n" |tee -a /users/data/log/${Sample}.log
+    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    exit
 fi &&
 
-sed -i "s:${OutputPath}/bam/::" ${OutputPath}/featureCounts/featurecounts.results.txt
-sed -i "s:.STAR.Aligned.sortedByCoord.out.bam::" ${OutputPath}/featureCounts/featurecounts.results.txt
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
+echo "${Sample} : All Done w/ FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
-wait
-
-
-cut -f1,7- ${OutputPath}/featureCounts/featurecounts.results.txt > ${OutputPath}/featureCounts/featurecounts.results.final.txt
-
-echo "All DONE"
+#fin.
