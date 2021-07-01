@@ -13,15 +13,15 @@
 ###################################################################
 
 
-# STAR \
+#STAR \
 #     --runThreadN 5 \
 #     --runMode genomeGenerate \
 #     --genomeDir /users/data/reference/hg38/ \
-#     --sjdbGTFfile /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+#     --sjdbGTFfile /users/data/reference/hg38/Homo_sapiens.GRCh38.104.chr.gtf \
 #     --genomeFastaFiles users/data/reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa \
 #     --sjdbOverhang 100
 
-# rsem-prepare-reference --gtf /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+# rsem-prepare-reference --gtf /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
 #                        --star \
 #                        --star-path ~/anaconda3/pkgs/star-2.7.6a-0/bin \
 #                        -p 8 \
@@ -77,10 +77,9 @@ STAR \
    --genomeDir \
    /users/data/reference/hg38/ \
    --runThreadN 6 \
-   --sjdbGTFfile /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+   --sjdbGTFfile /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
    --readFilesIn ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz \
    ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz \
-   --sjdbOverhang 100 \
    --readFilesCommand zcat \
    --outSAMtype BAM SortedByCoordinate \
    --outFilterMultimapNmax 20 \
@@ -190,7 +189,7 @@ if [ ${dicision} = "UnStranded" ]
 then
 
     featureCounts -T 10 -s 0 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
     -o ${OutputPath}/featureCounts/featurecounts.results.txt \
     ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
@@ -200,7 +199,7 @@ elif [ ${dicision} = "Stranded" ]
 then
 
     featureCounts -T 10 -s 1 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
     -o ${OutputPath}/featureCounts/featurecounts.results.txt \
     ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
@@ -209,7 +208,7 @@ elif [ ${dicision} = "ReverselyStranded" ]
 then
 
     featureCounts -T 10 -s 2 -p \
-    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.102.chr.gtf \
+    -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
     -o ${OutputPath}/featureCounts/featurecounts.results.txt \
     ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
