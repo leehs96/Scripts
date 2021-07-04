@@ -30,7 +30,22 @@
 #                        /users/data/reference/hg38/Homo_sapiens.GRCh38.dna.primary_assembly
 
 coldata=$1
-do.featurecount=$2  #1 = do featurecounts, 0 = don't
+dofeaturecount=$2  #y = do featurecounts, n = don't
+
+if [ ! -d ${OutputPath} ]
+then
+  mkdir ${OutputPath}
+fi
+
+dir=("trim" "bam" "RSEM" "FeatureCounts")
+
+for dirname in ${dir[@]}
+do
+if [ ! -d ${OutputPath}/${dirname} ]
+then
+  mkdir ${OutputPath}/${dirname}
+fi
+done
 
 while IFS= read -r line || [ -n "$line" ] 
 do
@@ -42,13 +57,6 @@ Sample=`echo ${Line} | awk '{print $3}'`
 OutputPath=`echo ${Line} | awk '{print $4}'`
  
 
-dir=("","trim","bam","RSEM")
-
-for dir.name in ${dir[@]}
-do
-if [ ! -d ${OutputPath} ]; then
-  mkdir ${OutputPath}/${dir.name}
-fi
 
 rm /users/data/log/${Sample}.log
 
@@ -204,7 +212,7 @@ done < ${coldata}
 
 
 wait
-if [ ${do.featurecount} -eq 1 ]
+if [ ${dofeaturecount} = "y" ]
 then
 
 echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
@@ -218,7 +226,7 @@ echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
         featureCounts -T 10 -s 0 -p \
         -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        -o ${OutputPath}/FeatureCounts/featurecounts.results.txt \
         ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
 
@@ -228,7 +236,7 @@ echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
         featureCounts -T 10 -s 1 -p \
         -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        -o ${OutputPath}/FeatureCounts/featurecounts.results.txt \
         ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
 
@@ -237,7 +245,7 @@ echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
         featureCounts -T 10 -s 2 -p \
         -a /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
-        -o ${OutputPath}/featureCounts/featurecounts.results.txt \
+        -o ${OutputPath}/FeatureCounts/featurecounts.results.txt \
         ${OutputPath}/bam/*.STAR.Aligned.sortedByCoord.out.bam 
 
 
@@ -246,10 +254,10 @@ echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
         exit 1
     fi &&
 
-    sed -i "s:${OutputPath}/bam/::" ${OutputPath}/featureCounts/featurecounts.results.txt
+    sed -i "s:${OutputPath}/bam/::" ${OutputPath}/FeatureCounts/featurecounts.results.txt
     sed -i "s:.STAR.Aligned.sortedByCoord.out.bam::" ${OutputPath}/featureCounts/featurecounts.results.txt
-    cut -f1,7- ${OutputPath}/featureCounts/featurecounts.results.txt > ${OutputPath}/featureCounts/featurecounts.results.final.txt
-elif [ ! ${do.featurecount} -eq 0 ]
+    cut -f1,7- ${OutputPath}/FeatureCounts/featurecounts.results.txt > ${OutputPath}/featureCounts/featurecounts.results.final.txt
+elif [ ! ${dofeaturecount} = "n" ]
 then
     echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
     date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
@@ -268,4 +276,4 @@ date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
 echo "${Sample} : All Done w/ FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
 echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
-#fin.
+# #fin.
