@@ -32,6 +32,15 @@
 coldata=$1
 dofeaturecount=$2  #y = do featurecounts, n = don't
 
+while IFS= read -r line || [ -n "$line" ] 
+do
+Line=$line
+
+echo "$line"
+FastqPath=`echo ${Line} | awk '{print $2}'`
+Sample=`echo ${Line} | awk '{print $3}'`
+OutputPath=`echo ${Line} | awk '{print $4}'`
+ 
 if [ ! -d ${OutputPath} ]
 then
   mkdir ${OutputPath}
@@ -47,23 +56,12 @@ then
 fi
 done
 
-while IFS= read -r line || [ -n "$line" ] 
-do
-Line=$line
-
-echo "$line"
-FastqPath=`echo ${Line} | awk '{print $2}'`
-Sample=`echo ${Line} | awk '{print $3}'`
-OutputPath=`echo ${Line} | awk '{print $4}'`
- 
-
-
 rm /users/data/log/${Sample}.log
 
 date +"%d-%m-%Y %T: ${Sample} RNA processing START" |tee -a /users/data/log/${Sample}.log
 
-echo "${Sample} : Outputpath = ${OutputPath}  " |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : trimommatic  " |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : Outputpath = ${OutputPath}  " |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : trimommatic  " |tee -a /users/data/log/${Sample}.log
 
 trimmomatic PE \
     -threads 5 \
@@ -82,15 +80,15 @@ trimmomatic PE \
 rm  ${OutputPath}/trim/${Sample}_RNA_U_1.fastq.gz 
 rm  ${OutputPath}/trim/${Sample}_RNA_U_2.fastq.gz 
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : trimommatic Done \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : trimommatic Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 wait
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : STAR \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : STAR \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 STAR \
    --genomeDir \
    /users/data/reference/hg38/ \
@@ -108,10 +106,10 @@ STAR \
 
 wait 
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : STAR Done \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : STAR Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 samtools index ${OutputPath}/bam/${Sample}.STAR.Aligned.sortedByCoord.out.bam &&
 
 UnS=`grep 'ENSG00000111640' ${OutputPath}/bam/${Sample}.STAR.ReadsPerGene.out.tab | awk '{print $2}'`
@@ -141,15 +139,15 @@ fi
 
 
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : ${dicision}" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : ${dicision}" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
 
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : RSEM \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : RSEM \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
 
 if [ ${dicision} = "UnStranded" ]
 then
@@ -200,10 +198,10 @@ rm ${OutputPath}/bam/${Sample}.STAR.Aligned.toTranscriptome.out.bam
 rm ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz
 rm ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz 
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : RSEM Done \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : RSEM Done \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 wait
 
@@ -215,10 +213,10 @@ wait
 if [ ${dofeaturecount} = "y" ]
 then
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
 
     if [ ${dicision} = "UnStranded" ]
@@ -259,21 +257,21 @@ echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
     cut -f1,7- ${OutputPath}/FeatureCounts/featurecounts.results.txt > ${OutputPath}/featureCounts/featurecounts.results.final.txt
 elif [ ! ${dofeaturecount} = "n" ]
 then
-    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
     date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-    echo "${Sample} : All Done w/o FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
-    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "${Sample} : All Done w/o FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 else
-    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
     date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-    echo "${Sample} : 1 = do featurecounts, 0 = don't \n\n" |tee -a /users/data/log/${Sample}.log
-    echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "${Sample} : 1 = do featurecounts, 0 = don't \n\n" |tee -a /users/data/log/${Sample}.log
+    echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
     exit
 fi &&
 
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo "${Sample} : All Done w/ FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
-echo "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : All Done w/ FeatureCounts \n\n" |tee -a /users/data/log/${Sample}.log
+echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 
-# #fin.
+#fin.
