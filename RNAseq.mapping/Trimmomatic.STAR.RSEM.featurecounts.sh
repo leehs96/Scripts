@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 ###################################################################
 #                                                                 #
 #  STAR version : 2.7.4a                                          #
@@ -36,11 +36,33 @@ while IFS= read -r line || [ -n "$line" ]
 do
 Line=$line
 
-echo "$line"
 FastqPath=`echo ${Line} | awk '{print $2}'`
 Sample=`echo ${Line} | awk '{print $3}'`
 OutputPath=`echo ${Line} | awk '{print $4}'`
  
+if [ -f /users/data/log/${Sample}.log ]
+then
+rm /users/data/log/${Sample}.log
+fi
+echo -e "------------------------------ \n" |tee -a /users/data/log/${Sample}.log
+date +"%d-%m-%Y %T: ${Sample} RNA processing START" |tee -a /users/data/log/${Sample}.log
+echo -e "\n------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
+
+
+echo -e "${Sample} : Fastq path = ${FastqPath}  " |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : Output path = ${OutputPath}  " |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample} : trimommatic  \n\n\n" |tee -a /users/data/log/${Sample}.log
+if [ ${dofeaturecount} = 'y' ]
+then
+echo -e "Do FeatureCounts after processing of all samples\n\n\n"
+elif [ ${dofeaturecount} = 'n' ]
+then
+echo -e "Do NOT FeatureCounts after processing of all samples\n\n\n"
+else
+echo -e "ERROR : please, assign 2nd parameter for featurecounts : y = do featurecounts, n = don't"
+exit 1
+fi
+
 if [ ! -d ${OutputPath} ]
 then
   mkdir ${OutputPath}
@@ -56,15 +78,8 @@ then
 fi
 done
 
-rm /users/data/log/${Sample}.log
-
-date +"%d-%m-%Y %T: ${Sample} RNA processing START" |tee -a /users/data/log/${Sample}.log
-
-echo -e "${Sample} : Outputpath = ${OutputPath}  " |tee -a /users/data/log/${Sample}.log
-echo -e "${Sample} : trimommatic  " |tee -a /users/data/log/${Sample}.log
-
 trimmomatic PE \
-    -threads 5 \
+    -threads 10 \
     ${FastqPath}/${Sample}_RNA_1.fastq.gz \
     ${FastqPath}/${Sample}_RNA_2.fastq.gz \
     ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz \
@@ -92,7 +107,7 @@ echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.
 STAR \
    --genomeDir \
    /users/data/reference/hg38/ \
-   --runThreadN 6 \
+   --runThreadN 10 \
    --sjdbGTFfile /users/data/reference/hg38/Homo_sapiens.GRCh38.104.gtf \
    --readFilesIn ${OutputPath}/trim/${Sample}_RNA_P_1.fastq.gz \
    ${OutputPath}/trim/${Sample}_RNA_P_2.fastq.gz \
@@ -141,7 +156,7 @@ fi
 
 echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
-echo -e "${Sample} : ${dicision}" |tee -a /users/data/log/${Sample}.log
+echo -e "${Sample}'s RNA library sequenced as ${dicision}\n\n" |tee -a /users/data/log/${Sample}.log
 echo -e "------------------------------\n\n" |tee -a /users/data/log/${Sample}.log
 
 
@@ -153,7 +168,7 @@ if [ ${dicision} = "UnStranded" ]
 then
 
     rsem-calculate-expression \
-    -p 6 \
+    -p 10 \
     --alignments \
     --paired-end \
     --forward-prob 0.5 \
@@ -167,7 +182,7 @@ elif [ ${dicision} = "Stranded" ]
 then
 
     rsem-calculate-expression \
-    -p 6 \
+    -p 10 \
     --alignments \
     --paired-end \
     --forward-prob 1 \
@@ -180,7 +195,7 @@ elif [ ${dicision} = "ReverselyStranded" ]
 then
 
     rsem-calculate-expression \
-    -p 6 \
+    -p 10 \
     --alignments \
     --paired-end \
     --forward-prob 0 \
@@ -190,7 +205,7 @@ then
     ${OutputPath}/RSEM/${Sample} 
 
 else
-    echo "ERROR undefined RSEM strandedness"
+    echo "ERROR : undefined RSEM strandedness"
     exit 1
 fi &&
 
@@ -212,6 +227,10 @@ done < ${coldata}
 wait
 if [ ${dofeaturecount} = "y" ]
 then
+
+CA featurecount
+
+wait 
 
 echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.log
 date +"%d-%m-%Y %T: ${Sample}" |tee -a /users/data/log/${Sample}.log
@@ -248,7 +267,7 @@ echo -e "------------------------------ \n\n" |tee -a /users/data/log/${Sample}.
 
 
     else
-        echo "ERROR undefined RSEM strandedness"
+        echo "ERROR : undefined RSEM strandedness"
         exit 1
     fi &&
 

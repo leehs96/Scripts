@@ -1,0 +1,8 @@
+SJH_LN	SJH_Blood
+SJH_Lat	SJH_Blood
+SJH_Isth	SJH_Blood
+SJH_Cen1	SJH_Blood
+LMS_Recur	LMS_Blood
+LMS_LN_3R1	LMS_Blood
+LMS_LN_3L1	LMS_Blood
+LMS_Cancer	LMS_Blood
