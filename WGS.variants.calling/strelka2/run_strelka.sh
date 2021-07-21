@@ -8,8 +8,9 @@ Line=$line
 tumor=`echo ${Line} | awk '{print $1}'`
 normal=`echo ${Line} | awk '{print $2}'`
 
+COUNT_LOG_FILES=$(find . -maxdepth 1 -name "${tumor}}*" -type f | wc -l)
 
-if [ -f /users/hslee/cancer/WGS_hg38/Illumina_pipe/log/${tumor}* ]
+if [[ $COUNT_LOG_FILES -gt 0 ]]
 then
 rm /users/hslee/cancer/WGS_hg38/Illumina_pipe/log/${tumor}*
 fi
@@ -70,4 +71,4 @@ echo -e "------------------------------ \n" |tee -a /users/hslee/cancer/WGS_hg38
 date +"%d-%m-%Y %T: ${tumor} strelka done" |tee -a /users/hslee/cancer/WGS_hg38/Illumina_pipe/log/${tumor}.log
 echo -e "\n------------------------------ \n\n" |tee -a /users/hslee/cancer/WGS_hg38/Illumina_pipe/log/${tumor}.log
 
-done < name.txt
+done < /users/hslee/cancer/WGS_hg38/Illumina_pipe/name.txt
